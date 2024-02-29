@@ -9,92 +9,59 @@ import time
 import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
 
-#Constants
+#CONSTANTS
+###################################################################################################################
 #density_ambient 
 p= 1.2 #kg/m^3
+
 #specific_heat_ambient
 c_p = .001 #kJ/kg-k
-#c_p = 1.05
+
 #ambient_temp 
+"""
+T_formula denotes the ambient tepmperature used in the first parathesized term in the MQH formular. 
+	Unit analysis shows this term needs to been in units of K
+T denotes the ambient temperature in the denominator of the LHS of the MQH formula. Following Bruns
+	paper this term is left in unit C.
+"""
 T_formula = 293.15 #K
 T = 20 #deg C
-#T = 293.15 #K
+
 #gravity 
 g = 9.81 #m/s^2
-#wall_thickness_values = [12.7,15.9]  #mm
+
+#wall_thickness_values
+# Brun's paper says these values should be in mm. Unit analysis shows units should be in m.
 wall_thickness_values = [.0127,.0159] #m
-#wall conductivity sample values (kW/m-k)
-#kw_samples = [.00028,.000258,.000276,.000254,.000314,.00028,.0003,.00023,.00032]
-kw_samples = [.00028,.000258,.000276,.000254,.000314,.00028,.0003,.00023,.00032, .00026, .000244,.000229]
-#kw_samples = [.28,.258,.276,.254,.314,.28,.3,.23,.32]
+
+#wall conductivity sample values 
+# Brun's paper has these values in W/m-k. Unit analysis shows this should be in KW/m-k or cw in J/kg-k
+kw_samples = [.00028,.000258,.000276,.000254,.000314,.00028,.0003,.00023,.00032, .00026, .000244,.000229] #(kW/m-k)
+
 #specific heat samples values (kJ/kg-k)
-#cw_samples = [1,1.089,1.017,.963,.891,1,1,1,1]
 cw_samples = [1,1.089,1.017,.963,.891,1,1,1,1, 1.5,.95,.95]
-#cw_samples = [.001,.001089,.001017,.000963,.000891,.001,.001,.001,.001, .0015,.00095,.00095]
+
 #wall density sample values (kg/m^3)
-#pw_samples = [810,711,752,743,805,730,845,745,870]
 #last three guessed values from charts in reference paper
 pw_samples = [810,711,752,743,805,730,845,745,870,640,725,690]
+
 #mean density and conductivity
+#Brun's paper states that the is correlation between conductivity and density but no clear correlation
+#amongst the other parameters (e.g pw and cw or cw and kw). Hence, Brun does not state how specific heat
+#was sampled. Since the multivariate normal plot for specific heat and conductivity should a better correlation
+#than specific heat and density in Brun's paper, I am sample specific heat from the specific heat/conductivity
+#multinormal distribution.
 mean_pw_kw = (np.average(pw_samples),np.average(kw_samples))
 mean_cw_kw = (np.average(cw_samples), np.average(kw_samples))
+
 #covariance matrix for density and wall conductivity
-#X = np.stack((pw_samples,kw_samples), axis=0)
-cov_pw_kw = np.cov(pw_samples,kw_samples)
+X1 = np.stack((pw_samples,kw_samples), axis=0)
+cov_pw_kw = np.cov(X1)
+X2 = np.stack((cw_samples,kw_samples), axis=0)
 cov_cw_kw = np.cov(cw_samples, kw_samples)
+###################################################################################################################
 
 
-#print(cov)
-#print(mean_pw_kw)
-"""
-rv = multivariate_normal(mean_pw_kw, cov, True)
-data = np.dstack((pw_samples, kw_samples))
-z = rv.pdf(data)
-print(z)
-#plt.contourf(pw_samples, kw_samples, z, cmap='coolwarm')
-#plt.show()
-"""
-"""
-#Ceiling height pdf
-bins = np.array([2.13,2.29,2.44,2.59,3.66])
-#freqs = np.array([3.56,41.34,38,30.7])
-density= np.array([.19,2.43,2.23,.25])
-#widths = bins[1:] - bins[:-1]
-#heights = freqs/widths
-plt.fill_between(bins.repeat(2)[1:-1], density.repeat(2), facecolor='steelblue')
-plt.show()
-"""
-"""
-hist, bin_edges = np.histogram(rel_freq, bins, density=True)
-fig, ax = plt.subplots()
-ax.bar(bin_edges, hist, width=np.diff(bin_edges), edgecolor="black", align="edge")
-plt.show()
-"""
-"""
-data = [3.56,41.34,38,30.7]
-#data = np.array([.19,2.43,2.23,.25])
-bins = [2.13,2.29,2.44,2.59,3.66]
-hist, bin_edges = np.histogram(data, bins=bins, density=False)
-print(hist)
-print(bin_edges)
-plt.hist(hist)
-plt.show()
-"""
-
-#Function to ensure ceiling height is between min and max range
-"""
-	bins = np.array([2.13, 2.29, 2.44, 2.59, 3.66])
-	freqs = np.array([356, 4134, 380, 307])
-
-	# Normalize the frequencies
-	prob_dist = freqs / freqs.sum()
-
-	# Sample a single value from the bin edges based on the specified probabilities
-	bin_index = np.random.choice(np.arange(len(bins)-1), size=1, p=prob_dist)[0]
-	sampled_value = np.random.uniform(bins[bin_index], bins[bin_index + 1], size=1)[0]
-
-	return sampled_value
-"""
 def sample_ceiling_height():
 
 	bins = np.array([2.13, 2.29, 2.44, 2.59])
@@ -139,20 +106,10 @@ def sample_floor_area():
 	if x == 22.5:
 		fx = random.uniform(22.5,26.5)
 	if x == 26.5:
-		fx = random.uniform(26.5,35)
+		fx = random.uniform(26.5,34.6)
 
 	return fx
 
-#Function to ensure floor area is between min and max range
-def trim_floor_area(x):
-
-	if x <= 12.8:
-		return 12.8
-
-	if x >= 34.6:
-		return 34.6
-
-	return x
 
 #Calculate thermal penetration
 def calc_thermal_penetration(p_w, c_w, L_w, k_w):
@@ -179,27 +136,18 @@ def monte_carlo_simulation(num_simulations, HRR, t):
 	printProgressBar(0, num_simulations, prefix = 'Progress:', suffix = 'Complete', length = 50)
 	for j in range(num_simulations):
 
-		#Flashover temperature rise (deg K)
-		#delta_T = random.uniform(773.15, 873.15)
 		#Flashover temperature rise (deg C)
+		#Brun's paper contradicts itself saying the range is between 500-600 C and 500-600 K
 		delta_T = random.uniform(500,600)
 
 		#Location parameter
 		K = random.uniform(1.63,2.77)
 		
-		#Ceiling height (check mean and std later)
-		#H_c = np.random.lognormal(2.61, 0.765)
-		#H_c = np.random.normal(2.61, 0.765)
-		#H_c = trim_ceiling_height(H_c)
+		#Ceiling height
 		H_c = sample_ceiling_height()
-		#H_c = 1.13
 
-		#Floor area (check mean and std later)
-		#_f = np.random.lognormal(18.2, 10.9)
-		#A_f = np.random.normal(18.2, 10.9)
-		#A_f = np.random.lognormal(18.2, 2.26)
+		#Floor area
 		A_f = sample_floor_area()
-		#A_f = 12.8
 
 		#Door height
 		H_o = random.uniform(1.63, H_c)
@@ -209,28 +157,15 @@ def monte_carlo_simulation(num_simulations, HRR, t):
 
 		#Wall thickness
 		L_w = np.random.choice(wall_thickness_values)
+
 		#Room aspect ratio
 		nu = random.uniform(0.5,1)
 
-		"""
-		#Wall conductivity (change later)
-		#k_w = 0.000269
-		k_w = random.uniform(.00022,.00032)
-		
-		#Wall density (change later)
-		#p_w = 757
-		p_w = random.uniform(650,875)
-		"""
-
+		# specific heat, and density
 		p_w, k_w = np.random.multivariate_normal(mean_pw_kw,cov_pw_kw)
-		#k_w = np.random.normal(np.average(kw_samples),np.std(kw_samples))
-		#p_w = np.random.normal(np.average(pw_samples),np.std(pw_samples))
 		
-		#Wall specific heat capacity (change later)
-		#c_pw = .88
-		#c_pw = random.uniform(.88,1.5)
-		c_pw = np.random.normal(np.average(cw_samples), np.std(cw_samples))
-		#c_pw, k_w_ignore = np.random.multivariate_normal(mean_cw_kw,cov_cw_kw)
+		#conductivity 
+		c_pw, k_w_ignore = np.random.multivariate_normal(mean_cw_kw,cov_cw_kw)
 
 		#Thermal penetration coefficient
 		t_w = calc_thermal_penetration(p_w, c_pw, L_w, k_w)
@@ -247,6 +182,7 @@ def monte_carlo_simulation(num_simulations, HRR, t):
 		T_res = HGL - delta_T
 		T_res = T_res + 273.15 #Covert from deg C to K
 		ALL_Tres.append(T_res)
+
 		printProgressBar(j + 1, num_simulations, prefix = 'Progress:', suffix = 'Complete', length = 50)
 	return ALL_Tres
 
